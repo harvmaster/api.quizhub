@@ -53,9 +53,16 @@ class Jeopardy {
       this.setClient(lobby, uuid, client)
       this.setConnected(lobby, uuid, true)
       this.updateClientInfo(lobby, uuid, { avatar: msg.avatar, username: msg.username })
+      const player = {}
+      player[this.getUsername(lobby, uuid)] = {
+        username: this.getUsername(lobby, uuid),
+        score: this.lobbies[lobby].clients[uuid].score,
+        avatar: this.lobbies[lobby].clients[uuid].avatar,
+        connected: this.lobbies[lobby].clients[uuid].connected,
+      }
       this.notify('player-join', {
         description: `${this.getUsername(lobby, uuid)} has reconnected`,
-        player: this.getUsername(lobby, uuid)
+        player: player
       })
       return client.emit('connected', this.game.getState(lobby))
     }
@@ -64,8 +71,8 @@ class Jeopardy {
     this.add(lobby, client, msg)
     client.emit('connected', this.game.getState(lobby))
     this.notify('player-join', {
-      description: `${this.clients.getUsername(lobby, uuid)} has joined the lobby`,
-      player: this.clients.getUsername(lobby, uuid)
+      description: `${getUsername(lobby, uuid)} has joined the lobby`,
+      player: this.getUsername(lobby, uuid)
     })
   }
 
