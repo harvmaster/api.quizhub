@@ -316,28 +316,6 @@ class Jeopardy {
       topic: q.topic
     }
   }
-
-  /**
-   * Notify any Websocket connections that are subscribed to
-   * the given id that an event has occurred.
-   * @param lobbyId The ID of the game
-   * @param event The event that was triggered
-   * @param msg The Invoice data
-   */
-  async notify (lobbyId, event, msg) {
-    try {
-      if (this.lobbies[lobbyId].clients) {
-        // Compile payload
-        var payload = Object.assign({ event: event }, msg)
-
-        for (const player of this.lobbies[lobbyId].clients) {
-          player.client.emit(event, payload)
-        }
-      }
-    } catch (err) {
-      console.log(err)
-    }
-  }
 }
 
 const jeopardy = new Jeopardy()

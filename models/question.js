@@ -22,6 +22,33 @@ schema.methods.format = async function () {
   }
 }
 
+schema.methods.toBasicFormat = async function () {
+  return {
+    id: this._id,
+    price: this.price,
+    topic: this.topic
+  }
+}
+
+schema.methods.toOpenedFormat = async function () {
+  return {
+    id: this._id,
+    price: this.price,
+    content: this.content,
+    topic: this.topic
+  }
+}
+
+schema.methods.toAnsweredFormat = async function () {
+  return {
+    id: this._id,
+    price: this.price,
+    content: this.content,
+    answer: this.answer,
+    topic: this.topic
+  }
+}
+
 schema.methods.getQuestions = async function (boardId) {
   const questions = await this.find({ boardId })
   const formatted = questions.map(q => q.format())
