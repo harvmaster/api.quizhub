@@ -1,5 +1,5 @@
 module.exports = {
     port: 3000,
-    mongoDB: 'mongodb://Gameshow:gameshow@localhost:3104',
+    mongoDB: 'mongodb://gameshow:z464732cdH4d32e!@localhost/gameshow',
   }
   

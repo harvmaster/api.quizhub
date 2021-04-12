@@ -21,9 +21,8 @@ class App {
     //
     try {
       console.log('Connecting to MongoDB')
-      console.log(config.mongoDB)
+      // console.log(config.mongoDB)
       await mongoose.connect()
-      console.log('Connected to MongoDB')
     } catch (err) {
       console.error(err.message)
     }

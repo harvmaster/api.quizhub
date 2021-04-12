@@ -12,34 +12,27 @@ const schema = new mongoose.Schema({
   timestamps: true
 })
 
+schema.methods.parsePublic = function () {
+  return {
+    id: this._id,
+    price: this.price,
+    content: this.opened ? this.content : null,
+    answer: this.answered ? this.answer : null,
+    topic: this.topic
+  }
+}
+
+schema.methods.toOpen = function () {
+  this.opened = true
+  return this
+}
+
+schema.methods.toAnswer = function () {
+  this.answered = true
+  return this
+}
+
 schema.methods.format = async function () {
-  return {
-    id: this._id,
-    price: this.price,
-    content: this.content,
-    answer: this.answer,
-    topic: this.topic
-  }
-}
-
-schema.methods.toBasicFormat = async function () {
-  return {
-    id: this._id,
-    price: this.price,
-    topic: this.topic
-  }
-}
-
-schema.methods.toOpenedFormat = async function () {
-  return {
-    id: this._id,
-    price: this.price,
-    content: this.content,
-    topic: this.topic
-  }
-}
-
-schema.methods.toAnsweredFormat = async function () {
   return {
     id: this._id,
     price: this.price,

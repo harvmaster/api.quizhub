@@ -2,16 +2,13 @@
 
 class Player {
   constructor (client, player, host) {
-    this.client = client
     this.uuid = player.uuid
     this.username = player.username
     this.avatar = player.avatar || '' // Put the default url for avatar here
-    this.host = host ?? false
     this.connected = true
     this.score = 0
     
     // Report errors if variable wasnt provided
-    if (!this.client) throw 'Client not provided'
     if (!this.uuid) throw 'UUID not provided'
     if (!this.username) throw 'Username not provided'
   }
@@ -30,10 +27,6 @@ class Player {
 
   isConnected () {
     return this.connected
-  }
-
-  getClient() {
-    return this.client
   }
 
   // Score getter & setter
@@ -64,7 +57,7 @@ class Player {
 
 
   // Returns the the player object that can be returned to players
-  parsePublic () {
+  toPlayer () {
     return {
       avatar: this.avatar,
       connected: this.isConnected(),

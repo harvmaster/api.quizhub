@@ -17,7 +17,8 @@ mongoose.set('debug', false)
 exports.connect = async () => {
   mongoose.connect(config.mongoDB, {
     keepAlive: 1,
-    useNewUrlParser: true
+    useNewUrlParser: true,
+    useUnifiedTopology: true
   })
 
   mongoose.set('useCreateIndex', true)

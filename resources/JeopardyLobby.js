@@ -2,10 +2,14 @@
 
 const Questions = require('../models/question')
 
+const generateID = require('./generators')
+import { compare } from './utils.js' 
+
 class Lobby {
-  constructor (board) {
-    this.board = board
-    this.questions = this.toObject(Questions.find({ board: board }))
+  constructor (lobbyId) {
+    this.id = lobbyId
+    // this.board = board
+    this.questions = []
     this.clients = {}
     
     this.buzzer = {
@@ -17,83 +21,159 @@ class Lobby {
       question: {}
     }
 
+    this.lastState = this.getFullState()
+
     // Report errors if variable wasnt provided
-    if (!this.board) throw 'BoardID not provided'
+    // if (!this.board) throw 'BoardID not provided'
   }
 
-  // Adds the player to the lobby
-  addPlayer (player) {
-    this.clients[player.getUUID()] = player
-  }
-
-  removePlayer (player) {
-    delete this.clients[player.getUUID()]
-  }
-
-  getFullState () {
-    return {
-      buzzer: this.buzzer,
-      players: this.getPlayers(),
-      question: this.formatQuestions()
-    }
-  }
-
-  getQuestions () {
-    return this,toObject(this.questions.map(question => question.toBasicFormat()))
-  }
-
-  getOpenedQuestions () {
-    return this.toObject(this.questions.filter(question => question.opened).map(question => question.toOpenedFormat()))
-  }
-
-  getRevealedQuestions () {
-    return this.toObject(this.questions.filter(question => question.revealed).map(question => question.toRevealedFormat()))
-  }
-
-  formatQuestions() {
-    return Object.assign({}, this.getQuestions(), this.getOpenedQuestions(), this.getRevealedQuestions())
-  }
-
-
-
-  open (question) {
-    this.questions[question].opened = true
-    this.state.question = this.questions[question].toOpenedFormat()
-    
-    this.notify('question-opened', {
-      state: this.state
+  init (callback) {
+    return new Promise ((resolve, reject) => {
+      Questions.find({ boardId: this.board }).then(questions => {
+        this.questions = questions
+        resolve(this)
+      })
     })
   }
 
-  reveal (question) {
-    this.questions[question].revealed = true
-    this.state.question = this.questions[question].toRevealedFormat()
-
-    this.notify('question-revealed', {
-      state: this.state
-    })
-  }
-
-  // Formats all players into safe format for users
-  getPlayers () {
-    return this.clients.map(player => player.toPlayer())
+  getId () {
+    return this.id
   }
 
   /*
-   *  Buzzer
    *
+   *  Player functions
+   * 
+   */
+  addPlayer (player) {
+    this.clients[player.getUUID()] = player
+
+    return this
+  }
+
+  removePlayer (player) {
+    player.getClient().disconnect()
+    delete this.clients[player.getUUID()]
+
+    return this
+  }
+
+  disconnectPlayer (player) {
+    player.setConnected(false)
+
+    return this
+  }
+
+  getPlayer (client) {
+    return this.clients[client.uuid]
+  }
+
+  getPlayers () {
+    return Object.keys(this.clients).map(key => {
+      return this.clients[key].parsePublic()
+    }).sort((a, b) => {
+      if (a.username < b.username) return -1
+      if (a.username > b.username) return 1
+      return 0
+    })
+    // const players = {}
+
+    // Object.keys(this.clients).sort((a, b) => a.username - b.username ).forEach(key => {
+    //   players[this.clients[key].username] = this.clients[key].parsePublic()
+    // })
+    // return players
+  }
+
+  getConnectedPlayers () {
+    return Object.keys(this.clients).map(key => {
+      return this.clients[key].parsePublic()
+    }).sort((a, b) => {
+      if (a.username < b.username) return -1
+      if (a.username > b.username) return 1
+      return 0
+    }).filter((player) => {
+      return player.isConnected()
+    })
+  }
+
+  /*
+   *  
+   *  Format questions to send to players
+   * 
+   */
+  getQuestions () {
+    return this.toObject(this.questions.map(question => question.parsePublic()))
+  }
+
+  // getOpenedQuestions () {
+  //   return this.toObject(this.questions.filter(question => question.opened).map(question => question.toOpenedFormat()))
+  // }
+
+  // getRevealedQuestions () {
+  //   return this.toObject(this.questions.filter(question => question.revealed).map(question => question.toRevealedFormat()))
+  // }
+
+  // formatQuestions() {
+  //   return Object.assign({}, this.getQuestions(), this.getOpenedQuestions(), this.getRevealedQuestions())
+  // }
+
+  open (question) {
+    this.questions[question].open()
+    this.state.question = this.questions[question].parsePublic()
+    
+    return this.state
+  }
+
+  reveal (question) {
+    this.questions[question].answer()
+    this.state.question = this.questions[question].parsePublic()
+
+    return this.state
+  }
+
+  /*
+   *
+   * Buzzer
    * 
    */
   setBuzzer (state) {
-    this.buzzer.unlocked
+    this.buzzer.unlocked = state
+
+    return this
   }
 
   buzzPlayer (player) {
     this.buzzer.push(player.username)
+
+    return this
   }
 
   clearBuzzer () {
     this.buzzer = []
+
+    return this
+  }
+
+  getBuzzedPlayers () {
+    return this.buzzed
+  }
+
+  // Return the full state of the game for the players
+  getFullState () {
+    return {
+      buzzer: this.buzzer,
+      players: this.getPlayers(),
+      questions: this.getQuestions(),
+      state: this.state
+    }
+  }
+
+  update () {
+    const state = this.getFullState()
+    const difference = compare (this.lastState, state)
+    // console.log(difference)
+    this.lastState = state
+    return difference
   }
 
 
@@ -101,27 +181,12 @@ class Lobby {
   toObject (array) {
     const obj = {}
     for (const v of array) {
+      if (!v.id) obj[v.username] = v
       obj[v.id] = v
     }
-  }
-
-  /**
-   * Notify any Websocket connections that are subscribed to
-   * the given id that an event has occurred.
-   * @param lobbyId The ID of the game
-   * @param event The event that was triggered
-   * @param msg The Invoice data
-   */
-  async notify (lobbyId, event, msg) {
-    try {
-      var payload = Object.assign({ event: event }, msg)
-
-      for (const player of this.clients) {
-        player.client.emit(event, payload)
-      }
-    } catch (err) {
-      console.log(err)
-    }
+    return obj
   }
   
 }
+
+module.exports = Lobby
